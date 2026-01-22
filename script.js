@@ -450,9 +450,8 @@ const GenieChat = {
         this.setLoadingState(true);
 
         try {
-            // Use the standalone Azure Function App for Genie API
-            const apiUrl = 'https://f1-genie-api.azurewebsites.net/api/genie/ask';
-            const response = await fetch(apiUrl, {
+            // Use the SWA managed API
+            const response = await fetch('/api/genie/ask', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

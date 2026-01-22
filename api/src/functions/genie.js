@@ -1,21 +1,21 @@
 const { app } = require("@azure/functions");
-const { DefaultAzureCredential } = require("@azure/identity");
 
-// Configuration - set these in Azure Static Web App Application Settings
+// Configuration - set these in Azure Function App Application Settings
 const DATABRICKS_HOST = process.env.DATABRICKS_HOST; // e.g., "https://adb-xxxxx.azuredatabricks.net"
 const GENIE_SPACE_ID = process.env.GENIE_SPACE_ID;   // Your Genie Space ID
-const DATABRICKS_RESOURCE_ID = "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"; // Azure Databricks resource ID
+const DATABRICKS_PAT = process.env.DATABRICKS_PAT;   // Databricks Personal Access Token
 
 const POLL_INTERVAL_MS = 2000;  // Poll every 2 seconds
 const TIMEOUT_MS = 60000;       // 60 second timeout
 
 /**
- * Get Azure AD token for Databricks using Managed Identity
+ * Get Databricks PAT token
  */
-async function getDatabricksToken() {
-    const credential = new DefaultAzureCredential();
-    const tokenResponse = await credential.getToken(`${DATABRICKS_RESOURCE_ID}/.default`);
-    return tokenResponse.token;
+function getDatabricksToken() {
+    if (!DATABRICKS_PAT) {
+        throw new Error("DATABRICKS_PAT environment variable is not set");
+    }
+    return DATABRICKS_PAT;
 }
 
 /**
@@ -173,9 +173,9 @@ app.http("ask", {
             
             const startTime = Date.now();
             
-            // Get Databricks token via Managed Identity
-            context.log("Authenticating with Databricks via Managed Identity...");
-            const token = await getDatabricksToken();
+            // Get Databricks PAT token
+            context.log("Authenticating with Databricks via PAT...");
+            const token = getDatabricksToken();
             
             let responseConversationId;
             let messageId;
@@ -206,14 +206,15 @@ app.http("ask", {
             };
             
         } catch (error) {
-            context.error("Error processing Genie request:", error);
+            context.error("Error processing Genie request:", error.message, error.stack);
             
-            // Don't expose internal errors to client
+            // Return error details for debugging
             return {
                 status: 500,
                 jsonBody: { 
                     success: false, 
-                    error: "An error occurred while processing your question. Please try again." 
+                    error: "An error occurred while processing your question. Please try again.",
+                    debug: error.message
                 }
             };
         }
