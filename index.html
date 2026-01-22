@@ -297,6 +297,48 @@
         </div>
     </footer>
 
+    <!-- Genie Chat Widget -->
+    <div class="genie-chat-widget">
+        <!-- Floating Button -->
+        <button class="genie-chat-button" id="genieChatButton" aria-label="Ask about F1 History">
+            <span class="genie-icon">🏎️</span>
+            <span class="genie-button-text">Ask Genie</span>
+        </button>
+
+        <!-- Chat Window -->
+        <div class="genie-chat-window" id="genieChatWindow">
+            <div class="genie-chat-header">
+                <div class="genie-chat-title">
+                    <span class="genie-header-icon">🏎️</span>
+                    <span>F1 History Genie</span>
+                </div>
+                <button class="genie-close-button" id="genieCloseButton" aria-label="Close chat">×</button>
+            </div>
+            
+            <div class="genie-chat-messages" id="genieChatMessages">
+                <div class="genie-message genie-message-bot">
+                    <div class="genie-message-content">
+                        Hi! I'm your F1 History assistant. Ask me anything about Formula 1 racing history, champions, teams, or memorable moments!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="genie-chat-input-container">
+                <input 
+                    type="text" 
+                    id="genieInput" 
+                    class="genie-chat-input" 
+                    placeholder="Ask about F1 history..."
+                    maxlength="1000"
+                    autocomplete="off"
+                >
+                <button class="genie-send-button" id="genieSendButton" aria-label="Send message">
+                    <span>➤</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

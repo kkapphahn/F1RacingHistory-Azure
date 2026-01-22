@@ -309,6 +309,204 @@ const handleResize = debounce(() => {
 window.addEventListener('resize', handleResize);
 
 // ================================
+// GENIE CHAT WIDGET
+// ================================
+
+const GenieChat = {
+    // State
+    conversationId: null,
+    isLoading: false,
+
+    // DOM Elements
+    elements: {
+        button: null,
+        window: null,
+        closeButton: null,
+        messages: null,
+        input: null,
+        sendButton: null
+    },
+
+    // Initialize the chat widget
+    init() {
+        this.elements.button = document.getElementById('genieChatButton');
+        this.elements.window = document.getElementById('genieChatWindow');
+        this.elements.closeButton = document.getElementById('genieCloseButton');
+        this.elements.messages = document.getElementById('genieChatMessages');
+        this.elements.input = document.getElementById('genieInput');
+        this.elements.sendButton = document.getElementById('genieSendButton');
+
+        if (!this.elements.button) return;
+
+        // Load conversation ID from session storage
+        this.conversationId = sessionStorage.getItem('genieConversationId');
+
+        // Bind events
+        this.elements.button.addEventListener('click', () => this.openChat());
+        this.elements.closeButton.addEventListener('click', () => this.closeChat());
+        this.elements.sendButton.addEventListener('click', () => this.sendMessage());
+        this.elements.input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+
+        // Close chat when clicking outside
+        document.addEventListener('click', (e) => {
+            if (this.elements.window.classList.contains('open') && 
+                !this.elements.window.contains(e.target) && 
+                !this.elements.button.contains(e.target)) {
+                this.closeChat();
+            }
+        });
+    },
+
+    // Open chat window
+    openChat() {
+        this.elements.window.classList.add('open');
+        this.elements.button.classList.add('chat-open');
+        this.elements.input.focus();
+    },
+
+    // Close chat window
+    closeChat() {
+        this.elements.window.classList.remove('open');
+        this.elements.button.classList.remove('chat-open');
+    },
+
+    // Add message to chat
+    addMessage(content, type = 'bot', isError = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `genie-message genie-message-${type}${isError ? ' genie-message-error' : ''}`;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'genie-message-content';
+        contentDiv.textContent = content;
+        
+        messageDiv.appendChild(contentDiv);
+        this.elements.messages.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        this.elements.messages.scrollTop = this.elements.messages.scrollHeight;
+        
+        return messageDiv;
+    },
+
+    // Show loading indicator
+    showLoading() {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'genie-message genie-message-bot genie-message-loading';
+        messageDiv.id = 'genieLoadingMessage';
+        
+        messageDiv.innerHTML = `
+            <div class="genie-message-content">
+                <div class="genie-loading-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        `;
+        
+        this.elements.messages.appendChild(messageDiv);
+        this.elements.messages.scrollTop = this.elements.messages.scrollHeight;
+    },
+
+    // Hide loading indicator
+    hideLoading() {
+        const loadingMessage = document.getElementById('genieLoadingMessage');
+        if (loadingMessage) {
+            loadingMessage.remove();
+        }
+    },
+
+    // Set UI loading state
+    setLoadingState(loading) {
+        this.isLoading = loading;
+        this.elements.input.disabled = loading;
+        this.elements.sendButton.disabled = loading;
+        
+        if (loading) {
+            this.showLoading();
+        } else {
+            this.hideLoading();
+        }
+    },
+
+    // Send message to Genie API
+    async sendMessage() {
+        const question = this.elements.input.value.trim();
+        
+        if (!question || this.isLoading) return;
+
+        // Clear input
+        this.elements.input.value = '';
+
+        // Add user message to chat
+        this.addMessage(question, 'user');
+
+        // Set loading state
+        this.setLoadingState(true);
+
+        try {
+            const response = await fetch('/api/genie/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    question: question,
+                    conversationId: this.conversationId
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Save conversation ID for follow-up questions
+                if (data.conversationId) {
+                    this.conversationId = data.conversationId;
+                    sessionStorage.setItem('genieConversationId', data.conversationId);
+                }
+
+                // Add bot response
+                this.addMessage(data.answer, 'bot');
+            } else {
+                // Show error message
+                this.addMessage(data.error || 'Sorry, I couldn\'t process your question. Please try again.', 'bot', true);
+            }
+        } catch (error) {
+            console.error('Genie API error:', error);
+            this.addMessage('Unable to connect to the F1 History assistant. Please check your connection and try again.', 'bot', true);
+        } finally {
+            this.setLoadingState(false);
+            this.elements.input.focus();
+        }
+    },
+
+    // Clear conversation history
+    clearConversation() {
+        this.conversationId = null;
+        sessionStorage.removeItem('genieConversationId');
+        
+        // Keep only the welcome message
+        this.elements.messages.innerHTML = `
+            <div class="genie-message genie-message-bot">
+                <div class="genie-message-content">
+                    Hi! I'm your F1 History assistant. Ask me anything about Formula 1 racing history, champions, teams, or memorable moments!
+                </div>
+            </div>
+        `;
+    }
+};
+
+// Initialize Genie Chat when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    GenieChat.init();
+});
+
+// ================================
 // CONSOLE EASTER EGG
 // ================================
 

@@ -1,0 +1,17 @@
+{
+  "name": "f1-genie-api",
+  "version": "1.0.0",
+  "description": "Azure Functions API for Databricks Genie integration",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "@azure/identity": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
