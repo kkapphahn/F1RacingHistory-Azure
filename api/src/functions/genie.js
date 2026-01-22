@@ -12,24 +12,17 @@ const TIMEOUT_MS = 60000;       // 60 second timeout
 /**
  * Get Azure AD token for Databricks using Managed Identity
  */
-async function getDatabricksToken(context) {
-    context.log("Attempting to get Databricks token via Managed Identity...");
-    context.log(`DATABRICKS_HOST: ${DATABRICKS_HOST}`);
-    context.log(`GENIE_SPACE_ID: ${GENIE_SPACE_ID}`);
-    
+async function getDatabricksToken() {
     const credential = new DefaultAzureCredential();
     const tokenResponse = await credential.getToken(`${DATABRICKS_RESOURCE_ID}/.default`);
-    context.log("Successfully obtained token");
     return tokenResponse.token;
 }
 
 /**
  * Make authenticated request to Databricks API
  */
-async function databricksRequest(token, method, path, body = null, context = null) {
+async function databricksRequest(token, method, path, body = null) {
     const url = `${DATABRICKS_HOST}${path}`;
-    if (context) context.log(`Making ${method} request to: ${url}`);
-    
     const options = {
         method,
         headers: {
@@ -46,7 +39,6 @@ async function databricksRequest(token, method, path, body = null, context = nul
     
     if (!response.ok) {
         const errorText = await response.text();
-        if (context) context.error(`Databricks API error: ${response.status} - ${errorText}`);
         throw new Error(`Databricks API error (${response.status}): ${errorText}`);
     }
     
@@ -56,17 +48,17 @@ async function databricksRequest(token, method, path, body = null, context = nul
 /**
  * Start a new Genie conversation
  */
-async function startConversation(token, question, context) {
+async function startConversation(token, question) {
     const path = `/api/2.0/genie/spaces/${GENIE_SPACE_ID}/start-conversation`;
-    return databricksRequest(token, "POST", path, { content: question }, context);
+    return databricksRequest(token, "POST", path, { content: question });
 }
 
 /**
  * Send a follow-up message in an existing conversation
  */
-async function createMessage(token, conversationId, question, context) {
+async function createMessage(token, conversationId, question) {
     const path = `/api/2.0/genie/spaces/${GENIE_SPACE_ID}/conversations/${conversationId}/messages`;
-    return databricksRequest(token, "POST", path, { content: question }, context);
+    return databricksRequest(token, "POST", path, { content: question });
 }
 
 /**
@@ -183,7 +175,7 @@ app.http("ask", {
             
             // Get Databricks token via Managed Identity
             context.log("Authenticating with Databricks via Managed Identity...");
-            const token = await getDatabricksToken(context);
+            const token = await getDatabricksToken();
             
             let responseConversationId;
             let messageId;
@@ -191,13 +183,13 @@ app.http("ask", {
             if (conversationId) {
                 // Continue existing conversation
                 context.log(`Continuing conversation ${conversationId}`);
-                const messageResponse = await createMessage(token, conversationId, question.trim(), context);
+                const messageResponse = await createMessage(token, conversationId, question.trim());
                 responseConversationId = conversationId;
                 messageId = messageResponse.message_id;
             } else {
                 // Start new conversation
                 context.log("Starting new Genie conversation");
-                const convResponse = await startConversation(token, question.trim(), context);
+                const convResponse = await startConversation(token, question.trim());
                 responseConversationId = convResponse.conversation.id;
                 messageId = convResponse.message.message_id;
             }
@@ -214,15 +206,14 @@ app.http("ask", {
             };
             
         } catch (error) {
-            context.error("Error processing Genie request:", error.message);
-            context.error("Stack:", error.stack);
+            context.error("Error processing Genie request:", error);
             
-            // Return error details for debugging (remove in production)
+            // Don't expose internal errors to client
             return {
                 status: 500,
                 jsonBody: { 
                     success: false, 
-                    error: error.message || "An error occurred while processing your question. Please try again."
+                    error: "An error occurred while processing your question. Please try again." 
                 }
             };
         }
