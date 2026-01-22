@@ -206,15 +206,13 @@ app.http("ask", {
             };
             
         } catch (error) {
-            context.error("Error processing Genie request:", error.message, error.stack);
+            context.error("Error processing Genie request:", error.message);
             
-            // Return error details for debugging
             return {
                 status: 500,
                 jsonBody: { 
                     success: false, 
-                    error: "An error occurred while processing your question. Please try again.",
-                    debug: error.message
+                    error: "An error occurred while processing your question. Please try again."
                 }
             };
         }
