@@ -375,6 +375,26 @@ const GenieChat = {
         this.elements.button.classList.remove('chat-open');
     },
 
+    // Convert basic markdown to HTML
+    formatMessage(content) {
+        // Escape HTML to prevent XSS
+        let escaped = content
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        
+        // Convert markdown bold **text** to <strong>text</strong>
+        escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        
+        // Convert markdown italic *text* to <em>text</em> (but not inside bold)
+        escaped = escaped.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        
+        // Convert newlines to <br>
+        escaped = escaped.replace(/\n/g, '<br>');
+        
+        return escaped;
+    },
+
     // Add message to chat
     addMessage(content, type = 'bot', isError = false) {
         const messageDiv = document.createElement('div');
@@ -382,7 +402,13 @@ const GenieChat = {
         
         const contentDiv = document.createElement('div');
         contentDiv.className = 'genie-message-content';
-        contentDiv.textContent = content;
+        
+        // Use innerHTML with formatted content for bot messages, textContent for user messages
+        if (type === 'bot') {
+            contentDiv.innerHTML = this.formatMessage(content);
+        } else {
+            contentDiv.textContent = content;
+        }
         
         messageDiv.appendChild(contentDiv);
         this.elements.messages.appendChild(messageDiv);
